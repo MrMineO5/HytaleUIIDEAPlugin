@@ -34,6 +34,9 @@
         <!-- Formatter -->
         <lang.formatter language="UI" implementationClass="app.ultradev.uifiles.formatter.UIFormattingModelBuilder"/>
 
+        <!-- Folding -->
+        <lang.foldingBuilder language="UI" implementationClass="app.ultradev.uifiles.folding.UIFoldingBuilder"/>
+
         <!-- Syntax Highlighting -->
         <lang.syntaxHighlighterFactory language="UI"
                                        implementationClass="app.ultradev.uifiles.syntax.UISyntaxHighlighterFactory"/>
@@ -46,8 +49,10 @@
         <psi.referenceContributor language="UI" implementation="app.ultradev.uifiles.reference.UIReferenceContributor"/>
 
         <!-- Annotations/Error Highlighting -->
-        <!--        <externalAnnotator language="UI" implementationClass="app.ultradev.uifiles.annotation.UIExternalAnnotator"/>-->
         <annotator language="UI" implementationClass="app.ultradev.uifiles.annotation.UIAnnotator"/>
+
+        <!-- Documentation -->
+        <platform.backend.documentation.targetProvider implementation="app.ultradev.uifiles.documentation.UIDocumentationProvider"/>
 
         <!-- Startup Activity - parse all files on project open -->
         <postStartupActivity implementation="app.ultradev.uifiles.startup.UIStartupActivity"/>

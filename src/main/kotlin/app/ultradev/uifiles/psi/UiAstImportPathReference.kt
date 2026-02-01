@@ -1,16 +1,15 @@
 package app.ultradev.uifiles.psi
 
-import app.ultradev.hytaleuiparser.ast.NodeReference
+import app.ultradev.hytaleuiparser.ast.NodeConstant
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.ideaTextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReferenceBase
 
-class UiAstImportReference(
-    file: UIFile, private val astRef: NodeReference
+class UiAstImportPathReference(
+    file: UIFile, private val astRef: NodeConstant
 ) : PsiReferenceBase<UIFile>(file, astRef.ideaTextRange, false) {
     override fun resolve(): PsiElement? {
-        val declAst = astRef.resolvedAssignment ?: return null
-        return UiPsiWrapperFactory.getOrCreate(element.project, declAst)
+        return UiPsiWrapperFactory.getFile(element.project, astRef.valueText)
     }
 }

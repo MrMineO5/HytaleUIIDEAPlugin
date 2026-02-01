@@ -1,10 +1,14 @@
 package app.ultradev.uifiles
 
+import app.ultradev.hytaleuiparser.ast.NodeToken
 import app.ultradev.hytaleuiparser.ast.RootNode
+import app.ultradev.hytaleuiparser.ast.visitor.findNodeAtOffset
+import app.ultradev.uifiles.psi.UiPsiWrapperFactory
 import app.ultradev.uifiles.service.UIAnalysisService
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.psi.FileViewProvider
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiReference
 import com.intellij.psi.impl.source.PsiFileImpl
@@ -15,7 +19,7 @@ class UIFile(viewProvider: FileViewProvider) : PsiFileImpl(UITokenTypes.FILE, UI
     fun getRootNode(): RootNode? {
         val file = virtualFile ?: return null
         val psiManager = PsiDocumentManager.getInstance(project)
-        if (!psiManager.isCommitted(this.fileDocument)) return null
+//        if (!psiManager.isCommitted(this.fileDocument)) return null
 
         val service = project.getService(UIAnalysisService::class.java)
         return service?.getRootNode(file)
@@ -29,4 +33,11 @@ class UIFile(viewProvider: FileViewProvider) : PsiFileImpl(UITokenTypes.FILE, UI
     }
 
     override fun getReferences(): Array<PsiReference> = ReferenceProvidersRegistry.getReferencesFromProviders(this)
+
+//    override fun findElementAt(offset: Int): PsiElement? {
+//        val root = getRootNode() ?: return null
+//        val node = root.findNodeAtOffset(offset) ?: return null
+//        val finalNode = if (node is NodeToken) node.parent else node
+//        return UiPsiWrapperFactory.getOrCreate(project, finalNode)
+//    }
 }
