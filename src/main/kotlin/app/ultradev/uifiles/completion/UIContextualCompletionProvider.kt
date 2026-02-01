@@ -5,6 +5,7 @@ import app.ultradev.hytaleuiparser.ast.visitor.findNodeAtOffset
 import app.ultradev.hytaleuiparser.validation.ElementType
 import app.ultradev.hytaleuiparser.validation.Scope
 import app.ultradev.hytaleuiparser.validation.types.TypeType
+import app.ultradev.hytaleuiparser.validation.types.displayName
 import app.ultradev.hytaleuiparser.validation.types.unifyEnum
 import app.ultradev.hytaleuiparser.validation.types.unifyStruct
 import app.ultradev.hytaleuiparser.validation.types.unifyStructOrNull
@@ -47,11 +48,17 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
             }
 
             nodeAtCursor is NodeVariable -> {
-                completeVariables(nodeAtCursor.resolvedScope, result)
+                val parent = nodeAtCursor.parent
+                val desiredType = when (parent) {
+                    is NodeField -> parent.resolvedType
+                    else -> null
+                }
+                thisLogger().warn("Desired type: $desiredType")
+                nodeAtCursor.resolvedScope?.let { completeVariables(it, result, desiredType) }
             }
 
             nodeAtCursor is NodeReference -> {
-                completeReferences(nodeAtCursor.resolvedScope, result)
+                completeReferences(nodeAtCursor.file, result)
             }
 
             nodeAtCursor is NodeBody -> {
@@ -59,9 +66,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
 
                 val parent = nodeAtCursor.parent
                 if (parent is NodeElement) {
-
-
-                    completeElementProperties(parent, parent.resolvedScope, result)
+                    completeElementProperties(parent, result)
                     completeElementTypes(result)
                 } else if (parent is NodeType) {
                     completeTypeProperties(parent.resolvedTypes, result)
@@ -120,22 +125,32 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
     }
 
     private fun completeVariables(
-        scope: Scope, result: CompletionResultSet
+        scope: Scope, result: CompletionResultSet, desiredType: TypeType?
     ) {
-        scope.variableKeys().forEach { varName ->
+        var variables: Collection<String> = scope.variableKeys()
+        if (desiredType != null) {
+            variables = variables
+                .filter {
+                    val variable = scope.lookupVariableAssignment(it)?.valueAsVariable ?: return@filter true
+                    if (variable is NodeElement) return@filter false
+                    desiredType in variable.resolvedTypes
+                }
+        }
+        variables.forEach { varName ->
+            val variable = scope.lookupVariableAssignment(varName)!!.valueAsVariable
             result.addElement(
                 LookupElementBuilder
                     .create(varName.removePrefix("@"))
                     .withPresentableText(varName)
-                    .withTypeText("Variable")
+                    .withTypeText(desiredType?.name ?: variable.resolvedTypes.displayName())
             )
         }
     }
 
     private fun completeReferences(
-        scope: Scope, result: CompletionResultSet
+        file: RootNode, result: CompletionResultSet
     ) {
-        scope.referenceKeys().forEach { refName ->
+        file.referenceMap.keys.forEach { refName ->
             result.addElement(
                 LookupElementBuilder
                     .create(refName)
@@ -146,7 +161,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
     }
 
     private fun completeElementProperties(
-        element: NodeElement, scope: Scope, result: CompletionResultSet
+        element: NodeElement, result: CompletionResultSet
     ) {
         val allowedProperties = element.resolvedType.properties
         allowedProperties.forEach { (propName, type) ->
