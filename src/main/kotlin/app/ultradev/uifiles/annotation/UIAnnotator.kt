@@ -2,6 +2,8 @@ package app.ultradev.uifiles.annotation
 
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.service.UIAnalysisService
+import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
@@ -23,10 +25,34 @@ class UIAnnotator : Annotator {
         for (diag in diagnostics) {
             if (!diag.range.intersects(element.textRange)) continue
 
-            holder.newAnnotation(
-                HighlightSeverity.ERROR,
-                diag.message
-            ).range(diag.range).create()
+            when (diag) {
+                is UIAnalysisService.UIErrorParse -> {
+                    holder
+                        .newAnnotation(
+                            HighlightSeverity.ERROR,
+                            diag.error.message ?: "Parse error"
+                        )
+                        .range(diag.range)
+                        .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                        .create()
+                }
+
+                is UIAnalysisService.UIErrorValidate -> {
+                    val annotation = holder.newAnnotation(
+                        HighlightSeverity.ERROR,
+                        diag.error.message
+                    )
+                        .range(diag.range)
+
+                    if (diag.error.cause != null) {
+                        annotation
+                            .tooltip(diag.error.message + "<br/><br/>Caused by: " + diag.error.cause!!.message)
+//                            .withFix(IntentionAction)
+                    }
+
+                    annotation.create()
+                }
+            }
         }
     }
 }

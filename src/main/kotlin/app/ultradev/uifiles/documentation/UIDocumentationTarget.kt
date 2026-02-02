@@ -70,7 +70,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                             val types = value.resolvedTypes
 
                             append(DocumentationMarkup.DEFINITION_START)
-                            append("${node.identifier}: ${types.displayName()}")
+                            append("${node.identifier}: ${types?.displayName() ?: "Unknown"}")
                             append(DocumentationMarkup.DEFINITION_END)
 
                             append(DocumentationMarkup.CONTENT_START)

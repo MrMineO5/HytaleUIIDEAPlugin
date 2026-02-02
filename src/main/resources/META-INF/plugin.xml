@@ -51,6 +51,9 @@
         <!-- Documentation -->
         <platform.backend.documentation.targetProvider implementation="app.ultradev.uifiles.documentation.UIDocumentationProvider"/>
 
+        <!-- Commenting -->
+        <lang.commenter language="UI" implementationClass="app.ultradev.uifiles.commenter.UICommenter"/>
+
         <!-- Startup Activity - parse all files on project open -->
         <postStartupActivity implementation="app.ultradev.uifiles.startup.UIStartupActivity"/>
     </extensions>

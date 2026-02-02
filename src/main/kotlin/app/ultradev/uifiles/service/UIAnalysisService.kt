@@ -2,10 +2,11 @@ package app.ultradev.uifiles.service
 
 import app.ultradev.hytaleuiparser.*
 import app.ultradev.hytaleuiparser.ast.RootNode
+import app.ultradev.uifiles.ideaTextRange
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Document
@@ -34,7 +35,17 @@ class UIAnalysisService(private val project: Project) {
     private val asts = ConcurrentHashMap<VirtualFile, RootNode>()
     private val diagnostics = ConcurrentHashMap<VirtualFile, List<UIError>>()
 
-    data class UIError(val range: TextRange, val message: String)
+    sealed interface UIError {
+        val range: TextRange
+    }
+
+    data class UIErrorParse(val error: ParserException) : UIError {
+        override val range: TextRange get() = error.token.ideaTextRange
+    }
+
+    data class UIErrorValidate(val error: ValidatorError) : UIError {
+        override val range: TextRange get() = error.node.ideaTextRange
+    }
 
     private val modificationStamps = ConcurrentHashMap<VirtualFile, Long>()
 
@@ -118,17 +129,15 @@ class UIAnalysisService(private val project: Project) {
         } catch (e: ParserException) {
             internalAsts.remove(file)
             diagnostics[file] = listOf(
-                UIError(
-                    TextRange(e.token.startOffset, e.token.startOffset + e.token.text.length),
-                    e.message ?: "Parse error"
-                )
-            )
-        } catch (e: Exception) {
-            internalAsts.remove(file)
-            diagnostics[file] = listOf(
-                UIError(TextRange(0, minOf(100, text.length)), "Parse error: ${e.message}")
+                UIErrorParse(e)
             )
         }
+//        catch (e: Exception) {
+//            internalAsts.remove(file)
+//            diagnostics[file] = listOf(
+//                UIError(TextRange(0, minOf(100, text.length)), "Parse error: ${e.message}")
+//            )
+//        }
     }
 
     private fun validateAllInternal() {
@@ -141,13 +150,11 @@ class UIAnalysisService(private val project: Project) {
         val validatedAsts = mutableMapOf<VirtualFile, RootNode>()
         astSnapshot.forEach { (file, ast) ->
             validator.validateRoot(getRelativePath(file))
-            diagnostics.putIfAbsent(file, validator.validationErrors
+            diagnostics.putIfAbsent(
+                file, validator.validationErrors
                 .filter { it.node.file == ast }
                 .map {
-                    UIError(
-                        it.node.textRange.let { (start, end) -> TextRange(start, end) },
-                        it.message
-                    )
+                    UIErrorValidate(it)
                 }
             )
             validatedAsts[file] = ast
@@ -157,7 +164,7 @@ class UIAnalysisService(private val project: Project) {
     }
 
     private fun dropCachesAndRestartDaemon() {
-        WriteCommandAction.runWriteCommandAction(project) {
+        ApplicationManager.getApplication().invokeLaterOnWriteThread {
             PsiManager.getInstance(project).let {
                 it.dropResolveCaches()
                 it.dropPsiCaches()
