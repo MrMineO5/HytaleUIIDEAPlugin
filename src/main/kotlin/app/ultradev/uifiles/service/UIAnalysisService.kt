@@ -137,16 +137,10 @@ class UIAnalysisService(private val project: Project) {
                 UIErrorParse(e)
             )
         }
-//        catch (e: Exception) {
-//            internalAsts.remove(file)
-//            diagnostics[file] = listOf(
-//                UIError(TextRange(0, minOf(100, text.length)), "Parse error: ${e.message}")
-//            )
-//        }
     }
 
     private fun parseFromZip() {
-        val assetZipPath = UIAppSettings.instance?.state?.assetZipPath ?: return
+        val assetZipPath = UIAppSettings.instance.state.effectiveAssetZipPath()
         if (assetZipPath.isEmpty()) return
         val zipFile = Paths.get(assetZipPath).toFile()
         if (!zipFile.exists()) return

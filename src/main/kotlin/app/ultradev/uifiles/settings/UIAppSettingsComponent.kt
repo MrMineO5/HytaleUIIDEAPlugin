@@ -1,93 +1,168 @@
 package app.ultradev.uifiles.settings
+
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.TextBrowseFolderListener
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.util.ui.FormBuilder
 import org.jetbrains.annotations.NotNull
-import java.io.File
-import javax.swing.JButton
+import java.awt.event.ActionListener
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
 import javax.swing.JPanel
-import kotlin.io.path.Path
-import kotlin.io.path.exists
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 /**
- * Supports creating and managing a [JPanel] for the Settings Dialog.
+ * Settings UI component for the plugin.
  */
 class AppSettingsComponent {
     val panel: JPanel
+
+    // ----------------
+    // UI elements
+    // ----------------
+    private val followConfigCheckbox =
+        JBCheckBox("Use assets from Hytale installation", true)
+
     private val assetZipPathField = TextFieldWithBrowseButton()
-    private val hytaleDirectoryText = JBTextField()
-    private val patchLineText = JBTextField("release")
+    private val hytaleDirectoryField = TextFieldWithBrowseButton()
+
+    private val patchLineBox = ComboBox(
+        DefaultComboBoxModel(arrayOf("release", "pre-release"))
+    )
+
     private val buildText = JBTextField("latest")
-    private val detectButton = JButton("Detect")
+
+    // --------------------------
+    // Public API
+    // --------------------------
+
+    var followConfig: Boolean
+        get() = followConfigCheckbox.isSelected
+        set(value) {
+            followConfigCheckbox.isSelected = value
+        }
 
     @get:NotNull
     var assetZipPath: String?
         get() = assetZipPathField.text
-        set(newText) {
-            assetZipPathField.text = newText ?: ""
+        set(value) {
+            assetZipPathField.text = value ?: ""
         }
-
-    init {
-        assetZipPathField.addBrowseFolderListener(
-            null,
-            FileChooserDescriptorFactory.createSingleFileDescriptor("zip")
-                .withTitle("Select Assets.zip")
-                .withDescription("Select the Hytale Assets.zip file")
-        )
-
-        detectButton.addActionListener {
-            assetZipPath = "${hytaleDirectory}/install/${patchLine}/package/game/${build}/Assets.zip"
-        }
-
-        // Determine default hytale directory based on system OS.
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            hytaleDirectoryText.text = "${System.getProperty("user.home")}/AppData/Roaming/Hytale"
-        } else if (System.getProperty("os.name").startsWith("Mac")) {
-            hytaleDirectoryText.text = "${System.getProperty("user.home")}/Library/Application Support/Hytale"
-        } else if (System.getProperty("os.name").startsWith("Linux")) {
-            var linuxPath = "${System.getProperty("user.home")}/.var/app/com.hypixel.HytaleLauncher/data/Hytale"
-            if (!Path(linuxPath).exists()) {
-                linuxPath = "${System.getProperty("user.home")}/.local/share/Hytale"
-            }
-            hytaleDirectoryText.text = linuxPath
-        }
-
-        if (assetZipPath.isNullOrEmpty()) {
-            assetZipPath = "${hytaleDirectory}/install/${patchLine}/package/game/${build}/Assets.zip"
-        }
-
-        panel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(JBLabel("Asset zip path:"), assetZipPathField, 1, false)
-            .addSeparator()
-            .addLabeledComponent(JBLabel("Hytale directory (for detection):"), hytaleDirectoryText, 1, false)
-            .addLabeledComponent(JBLabel("Patch line:"), patchLineText, 1, false)
-            .addLabeledComponent(JBLabel("Build:"), buildText, 1, false)
-            .addComponent(detectButton)
-            .addComponentFillVertically(JPanel(), 0)
-            .getPanel()
-    }
-
-    val preferredFocusedComponent: JComponent
-        get() = assetZipPathField
 
     var hytaleDirectory: String?
-        get() = hytaleDirectoryText.text
-        set(newText) {
-            hytaleDirectoryText.text = newText
+        get() = hytaleDirectoryField.text
+        set(value) {
+            hytaleDirectoryField.text = value ?: ""
         }
 
     var patchLine: String?
-        get() = patchLineText.text
-        set(newText) {
-            patchLineText.text = newText
+        get() = patchLineBox.editor.item?.toString()
+        set(value) {
+            patchLineBox.editor.item = value
         }
 
     var build: String?
         get() = buildText.text
-        set(newText) {
-            buildText.text = newText
+        set(value) {
+            buildText.text = value ?: ""
         }
+
+    val preferredFocusedComponent: JComponent
+        get() = patchLineBox
+
+    init {
+        // --- File choosers ---
+
+        assetZipPathField.addBrowseFolderListener(
+            TextBrowseFolderListener(
+                FileChooserDescriptorFactory
+                    .createSingleFileDescriptor("zip")
+                    .withDescription("Select Assets.zip")
+            )
+        )
+
+        hytaleDirectoryField.addBrowseFolderListener(
+            TextBrowseFolderListener(
+                FileChooserDescriptorFactory
+                    .createSingleFolderDescriptor()
+                    .withDescription("Select your Hytale base directory (should contain the 'install' folder)")
+            )
+        )
+
+        // --- Editable combo box setup ---
+        patchLineBox.isEditable = true
+        patchLineBox.setMinimumAndPreferredWidth(patchLineBox.preferredSize.width)
+
+        // --- Defaults ---
+        hytaleDirectoryField.text = HytaleDirs.defaultHytaleDirectory()
+        assetZipPathField.text = computedAssetZipPath()
+
+        // --- Reactive updates ---
+        followConfigCheckbox.addActionListener {
+            updateAssetZipState()
+        }
+
+        val onConfigChanged = ActionListener {
+            recomputeIfFollowing()
+        }
+
+        patchLineBox.addActionListener(onConfigChanged)
+        buildText.document.addChangeListener { recomputeIfFollowing() }
+        hytaleDirectoryField.textField.document.addChangeListener { recomputeIfFollowing() }
+
+        // Initial state sync
+        updateAssetZipState()
+
+        // --- Layout ---
+        panel = FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Hytale directory:"), hytaleDirectoryField)
+            .addLabeledComponent(JBLabel("Patch line:"), patchLineBox)
+            .addLabeledComponent(JBLabel("Build:"), buildText)
+            .addSeparator()
+            .addComponent(followConfigCheckbox)
+            .addLabeledComponent(JBLabel("Assets.zip path:"), assetZipPathField)
+            .addComponentFillVertically(JPanel(), 0)
+            .getPanel()
+    }
+
+    // --------------------------
+    // Internal logic
+    // --------------------------
+
+    private fun computedAssetZipPath(): String = HytaleDirs.defaultAssetsZipPath(
+        hytaleDirectory ?: "",
+        patchLine ?: "",
+        build ?: ""
+    )
+
+    private fun updateAssetZipState() {
+        val follow = followConfigCheckbox.isSelected
+        assetZipPathField.isEnabled = !follow
+
+        if (follow) {
+            assetZipPathField.text = computedAssetZipPath()
+        }
+    }
+
+    private fun recomputeIfFollowing() {
+        if (followConfigCheckbox.isSelected) {
+            assetZipPathField.text = computedAssetZipPath()
+        }
+    }
+}
+
+/**
+ * Tiny helper to reduce Swing boilerplate.
+ */
+private fun javax.swing.text.Document.addChangeListener(onChange: () -> Unit) {
+    addDocumentListener(object : DocumentListener {
+        override fun insertUpdate(e: DocumentEvent) = onChange()
+        override fun removeUpdate(e: DocumentEvent) = onChange()
+        override fun changedUpdate(e: DocumentEvent) = onChange()
+    })
 }
