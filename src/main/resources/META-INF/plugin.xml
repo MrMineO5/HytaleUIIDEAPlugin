@@ -56,5 +56,14 @@
 
         <!-- Startup Activity - parse all files on project open -->
         <postStartupActivity implementation="app.ultradev.uifiles.startup.UIStartupActivity"/>
+
+        <applicationService
+                serviceImplementation="app.ultradev.uifiles.settings.UIAppSettings"/>
+
+        <applicationConfigurable
+                parentId="tools"
+                instance="app.ultradev.uifiles.settings.UIAppSettingsConfigurable"
+                id="app.ultradev.uifiles.settings.UIAppSettingsConfigurable"
+                displayName="Hytale UI Parser Settings"/>
     </extensions>
 </idea-plugin>

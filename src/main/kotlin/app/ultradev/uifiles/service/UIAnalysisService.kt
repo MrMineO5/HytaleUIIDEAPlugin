@@ -17,6 +17,8 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.JarFileSystem
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -25,6 +27,8 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.psi.PsiManager
 import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
+import app.ultradev.uifiles.settings.UIAppSettings
+import java.nio.file.Paths
 import java.io.StringReader
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Service(Service.Level.PROJECT)
 class UIAnalysisService(private val project: Project) {
     private val internalAsts = ConcurrentHashMap<VirtualFile, RootNode>()
+    private val zipAsts = ConcurrentHashMap<VirtualFile, RootNode>()
     private val asts = ConcurrentHashMap<VirtualFile, RootNode>()
     private val diagnostics = ConcurrentHashMap<VirtualFile, List<UIError>>()
 
@@ -140,25 +145,60 @@ class UIAnalysisService(private val project: Project) {
 //        }
     }
 
-    private fun validateAllInternal() {
-        val astSnapshot = internalAsts.toMap()
-        if (astSnapshot.isEmpty()) return
+    private fun parseFromZip() {
+        val assetZipPath = UIAppSettings.instance?.state?.assetZipPath ?: return
+        if (assetZipPath.isEmpty()) return
+        val zipFile = Paths.get(assetZipPath).toFile()
+        if (!zipFile.exists()) return
 
-        val pathMap = astSnapshot.mapKeys { getRelativePath(it.key) }
+        val virtualFile = LocalFileSystem.getInstance().findFileByIoFile(zipFile) ?: return
+        val jarRoot = JarFileSystem.getInstance().getJarRootForLocalFile(virtualFile) ?: return
+
+        zipAsts.clear()
+        VfsUtilCore.iterateChildrenRecursively(jarRoot, null) { file ->
+            if (file.extension == "ui" && getRelativePath(file).startsWith("Common/UI/Custom")) {
+                try {
+                    val tokenizer = Tokenizer(StringReader(VfsUtilCore.loadText(file)))
+                    val parser = Parser(tokenizer)
+                    val ast = parser.finish()
+                    zipAsts[file] = ast
+                } catch (e: ParserException) {
+                    // If the common fails to parse correctly... do we care?
+                    //zipAsts.remove(file)
+                }
+            }
+            true
+        }
+    }
+
+    private fun validateAllInternal() {
+        val internalSnapshot = internalAsts.toMap()
+        val zipSnapshot = zipAsts.toMap()
+        val allAstSnapshot = zipSnapshot + internalSnapshot
+        if (allAstSnapshot.isEmpty()) return
+
+        val pathMap = allAstSnapshot.mapKeys { getRelativePath(it.key) }
+
         val validator = Validator(pathMap, validateUnusedVariables = true)
 
         val validatedAsts = mutableMapOf<VirtualFile, RootNode>()
-        astSnapshot.forEach { (file, ast) ->
-            validator.validateRoot(getRelativePath(file))
-            diagnostics.putIfAbsent(
-                file, validator.validationErrors
-                .filter { it.node.file == ast }
-                .map {
-                    UIErrorValidate(it)
-                }
-            )
-            validatedAsts[file] = ast
+        allAstSnapshot.forEach { (file, ast) ->
+            val relativePath = getRelativePath(file)
+            try {
+                validator.validateRoot(relativePath)
+                diagnostics.putIfAbsent(
+                    file, validator.validationErrors
+                        .filter { it.node.file == ast }
+                        .map {
+                            UIErrorValidate(it)
+                        }
+                )
+                validatedAsts[file] = ast
+            } catch (e: NullPointerException) {
+                val hey = "test";
+            }
         }
+        
         asts.clear()
         asts.putAll(validatedAsts)
     }
@@ -178,14 +218,25 @@ class UIAnalysisService(private val project: Project) {
                 file.isInLocalFileSystem &&
                 ProjectRootManager.getInstance(project).fileIndex.isInSourceContent(file)
 
-    private fun getRelativePath(file: VirtualFile): String =
+    private fun getRelativePath(file: VirtualFile): String {
         ProjectRootManager.getInstance(project)
             .fileIndex
             .getSourceRootForFile(file)
             ?.let { root ->
-                root.toNioPath().relativize(file.toNioPath()).toString().replace('\\', '/')
+                return VfsUtilCore.getRelativePath(file, root, '/').toString()
             }
             ?: file.path
+
+        if (file.fileSystem is JarFileSystem) {
+            var jarRoot = file
+            while (jarRoot.parent != null) {
+                jarRoot = jarRoot.parent
+            }
+            return VfsUtilCore.getRelativePath(file, jarRoot, '/') ?: file.path
+        }
+
+        return file.path
+    }
 
     fun getDiagnostics(file: VirtualFile): List<UIError> {
         return diagnostics[file] ?: emptyList()
@@ -217,8 +268,10 @@ class UIAnalysisService(private val project: Project) {
                     true
                 }
             }
+            
+            parseFromZip()
 
-            if (files.isEmpty()) return@nonBlocking
+            if (files.isEmpty() && zipAsts.isEmpty()) return@nonBlocking
 
             files.forEach { parseFromDisk(it) }
             validateAllInternal()

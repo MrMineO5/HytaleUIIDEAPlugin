@@ -55,7 +55,7 @@ class UIFileReferenceProvider : PsiReferenceProvider() {
             refs += UiAstImportPathReference(file, it)
         }
 
-        thisLogger().debug("Collected ${refs.size} references: $refs")
+        thisLogger().warn("Collected ${refs.size} references: $refs")
 
         return refs.toTypedArray()
     }
