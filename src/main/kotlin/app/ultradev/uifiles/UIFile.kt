@@ -7,8 +7,6 @@ import app.ultradev.uifiles.psi.UiPsiWrapperFactory
 import app.ultradev.uifiles.service.UIAnalysisService
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.psi.FileViewProvider
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiReference
 import com.intellij.psi.impl.source.PsiFileImpl
@@ -18,7 +16,7 @@ class UIFile(viewProvider: FileViewProvider) : PsiFileImpl(UITokenTypes.FILE, UI
 
     fun getRootNode(): RootNode? {
         val file = virtualFile ?: return null
-        val psiManager = PsiDocumentManager.getInstance(project)
+//        val psiManager = PsiDocumentManager.getInstance(project)
 //        if (!psiManager.isCommitted(this.fileDocument)) return null
 
         val service = project.getService(UIAnalysisService::class.java)
