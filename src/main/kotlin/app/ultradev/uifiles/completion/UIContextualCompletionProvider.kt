@@ -45,7 +45,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
         val rootNode = file.getRootNode() ?: return
         val offset = parameters.offset
 
-        var nodeAtCursor = findNodeAtOffset(rootNode, offset)
+        var nodeAtCursor = rootNode.findNodeAtOffset(offset - 1) ?: rootNode
 
         if (nodeAtCursor is NodeToken) {
             nodeAtCursor = nodeAtCursor.parent
@@ -109,19 +109,11 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
                 }
             }
 
+            nodeAtCursor is NodeMemberField -> completeMemberField(nodeAtCursor, result)
+
             nodeAtCursor is NodeIdentifier -> {
                 val parent = nodeAtCursor.parent
-                if (parent is NodeMemberField) {
-                    parent.resolvedTypes?.unifyStructOrNull()?.forEach { (fieldName, fieldType) ->
-                        result.addElement(
-                            LookupElementBuilder
-                                .create(fieldName)
-                                .withTypeText(fieldType.name))
-
-                    }
-                }
-
-//                completeElementTypes(result)
+                if (parent is NodeMemberField) return completeMemberField(parent, result)
             }
 
             else -> {
@@ -130,8 +122,14 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
         }
     }
 
-    private fun findNodeAtOffset(root: RootNode, cursorOffset: Int): AstNode {
-        return root.findNodeAtOffset(cursorOffset - 1) ?: root
+    private fun completeMemberField(node: NodeMemberField, result: CompletionResultSet) {
+        val type = node.ownerAsVariableReference.deepResolve() as? NodeType ?: return
+        type.resolveFields().forEach { (fieldName, field) ->
+            result.addElement(
+                LookupElementBuilder
+                    .create(fieldName)
+                    .withTypeText(field.resolvedType.name))
+        }
     }
 
 

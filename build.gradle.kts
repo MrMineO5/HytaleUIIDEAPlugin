@@ -10,7 +10,7 @@ version = "1.0.1"
 repositories {
     mavenCentral()
     maven("https://mvn.ultradev.app/snapshots")
-    mavenLocal()
+//    mavenLocal()
     intellijPlatform {
         defaultRepositories()
     }
@@ -19,7 +19,7 @@ repositories {
 // Configure IntelliJ Platform Gradle Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
-    api("app.ultradev:HytaleUIParser:1.0.1")
+    api("app.ultradev:HytaleUIParser:1.0.4")
     
     intellijPlatform {
         intellijIdea("2025.3.2")

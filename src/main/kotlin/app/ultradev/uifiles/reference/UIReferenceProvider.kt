@@ -4,12 +4,15 @@ import app.ultradev.hytaleuiparser.ast.AstNode
 import app.ultradev.hytaleuiparser.ast.NodeAssignReference
 import app.ultradev.hytaleuiparser.ast.NodeAssignVariable
 import app.ultradev.hytaleuiparser.ast.NodeConstant
+import app.ultradev.hytaleuiparser.ast.NodeIdentifier
+import app.ultradev.hytaleuiparser.ast.NodeMemberField
 import app.ultradev.hytaleuiparser.ast.NodeReference
 import app.ultradev.hytaleuiparser.ast.NodeVariable
 import app.ultradev.hytaleuiparser.ast.visitor.AstVisitor
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.psi.UiAstImportPathReference
 import app.ultradev.uifiles.psi.UiAstImportReference
+import app.ultradev.uifiles.psi.UiAstMemberFieldReference
 import app.ultradev.uifiles.psi.UiAstVariableReference
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.psi.PsiElement
@@ -21,11 +24,13 @@ class ReferenceCollector : AstVisitor {
     val variableRefs = mutableListOf<NodeVariable>()
     val importRefs = mutableListOf<NodeReference>()
     val importPaths = mutableListOf<NodeConstant>()
+    val referenceMembers = mutableListOf<NodeIdentifier>()
 
     override fun visit(node: AstNode) {
         if (node is NodeVariable && node.parent !is NodeAssignVariable) variableRefs += node
         if (node is NodeReference && node.parent !is NodeAssignReference) importRefs += node
         if (node is NodeAssignReference) importPaths += node.filePath
+        if (node is NodeMemberField) referenceMembers += node.member
     }
 }
 
@@ -55,7 +60,11 @@ class UIFileReferenceProvider : PsiReferenceProvider() {
             refs += UiAstImportPathReference(file, it)
         }
 
-        thisLogger().warn("Collected ${refs.size} references: $refs")
+        collector.referenceMembers.forEach {
+            refs += UiAstMemberFieldReference(file, it)
+        }
+
+        thisLogger().debug("Collected ${refs.size} references: $refs")
 
         return refs.toTypedArray()
     }

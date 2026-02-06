@@ -1,8 +1,8 @@
 <idea-plugin>
     <id>app.ultradev.hytaleui</id>
-    <name>Hytale UI</name>
+    <name>HyUI</name>
     <vendor url="https://github.com/MrMineO5/">UltraDev</vendor>
-    <description>A plugin for editting Hytale UI files in IDEA</description>
+    <description>A plugin to provide editor features for Hytale UI files</description>
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">

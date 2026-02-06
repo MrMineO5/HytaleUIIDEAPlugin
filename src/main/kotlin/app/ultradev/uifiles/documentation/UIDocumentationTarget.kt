@@ -60,6 +60,28 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                         htmlBuilder.append(formatCode(parent.resolvedTypes.displayFullStructure()))
                     }
 
+                    is NodeMemberField -> {
+                        val value = parent.resolvedValue ?: return null
+                        htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
+                            .append(getFormattedSpan(parent.text, DefaultLanguageHighlighterColors.KEYWORD))
+                            .append(HtmlChunk.text(": "))
+                            .append(
+                                getFormattedSpan(
+                                    value.resolvedTypes?.displayName() ?: "Unknown",
+                                    DefaultLanguageHighlighterColors.CLASS_NAME
+                                )
+                            )
+                            .append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_END))
+
+                        htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.CONTENT_START))
+                            .append(
+                                HtmlChunk.tag("pre").child(
+                                    HtmlChunk.tag("code").addRaw(highlightValue(value).toString())
+                                )
+                            )
+                            .append(HtmlChunk.raw(DocumentationMarkup.CONTENT_END))
+                    }
+
                     else -> thisLogger().warn("Unknown parent: ${parent.javaClass.simpleName}")
                 }
             }
@@ -77,7 +99,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                     val types = value.resolvedTypes
 
                     htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
-                        .append(getFormattedSpan(node.identifier, DefaultLanguageHighlighterColors.IDENTIFIER))
+                        .append(getFormattedSpan(node.identifier, DefaultLanguageHighlighterColors.KEYWORD))
                         .append(HtmlChunk.text(": "))
                         .append(
                             getFormattedSpan(
@@ -111,7 +133,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                 builder.append(getFormattedSpan(value.resolvedTypes.displayName(), DefaultLanguageHighlighterColors.IDENTIFIER))
                 builder.append(HtmlChunk.text("(\n"))
                 val newIndent = "$indent    "
-                val entries = value.resolveValue(true).entries.toList()
+                val entries = value.resolveValue().entries.toList()
                 for ((index, entry) in entries.withIndex()) {
                     builder.append(HtmlChunk.text(newIndent))
                     builder.append(getFormattedSpan(entry.key, DefaultLanguageHighlighterColors.CLASS_NAME))
