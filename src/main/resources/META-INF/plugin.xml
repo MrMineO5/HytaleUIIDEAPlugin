@@ -29,12 +29,14 @@
 
         <!-- Reference Resolution -->
         <psi.referenceContributor language="UI" implementation="app.ultradev.uifiles.reference.UIReferenceContributor"/>
+        <elementDescriptionProvider implementation="app.ultradev.uifiles.psi.TestElementDescriptionProvider"/>
 
         <!-- Annotations/Error Highlighting -->
         <annotator language="UI" implementationClass="app.ultradev.uifiles.annotation.UIAnnotator"/>
 
         <!-- Documentation -->
-        <platform.backend.documentation.targetProvider implementation="app.ultradev.uifiles.documentation.UIDocumentationProvider"/>
+        <platform.backend.documentation.targetProvider
+                implementation="app.ultradev.uifiles.documentation.UIDocumentationProvider"/>
 
         <!-- Commenting -->
         <lang.commenter language="UI" implementationClass="app.ultradev.uifiles.commenter.UICommenter"/>

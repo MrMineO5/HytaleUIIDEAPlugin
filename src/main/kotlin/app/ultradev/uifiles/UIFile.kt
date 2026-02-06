@@ -1,9 +1,6 @@
 package app.ultradev.uifiles
 
-import app.ultradev.hytaleuiparser.ast.NodeToken
 import app.ultradev.hytaleuiparser.ast.RootNode
-import app.ultradev.hytaleuiparser.ast.visitor.findNodeAtOffset
-import app.ultradev.uifiles.psi.UiPsiWrapperFactory
 import app.ultradev.uifiles.service.UIAnalysisService
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.psi.FileViewProvider

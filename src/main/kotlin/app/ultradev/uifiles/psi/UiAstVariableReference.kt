@@ -3,6 +3,7 @@ package app.ultradev.uifiles.psi
 import app.ultradev.hytaleuiparser.ast.NodeVariable
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.ideaTextRange
+import com.intellij.openapi.util.NlsSafe
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReferenceBase
 

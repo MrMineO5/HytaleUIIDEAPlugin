@@ -1,6 +1,7 @@
 package app.ultradev.uifiles.psi
 
 import app.ultradev.hytaleuiparser.ast.AstNode
+import app.ultradev.hytaleuiparser.ast.NodeAssignVariable
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.ideaTextRange
 import com.intellij.navigation.ItemPresentation
@@ -26,11 +27,19 @@ open class UiAstPsiElement(
             .navigate(requestFocus)
     }
 
-    override fun getPresentableText(): String = "${astNode.javaClass.simpleName} [${file.name}]"
+    override fun getName(): String? = "Some text"
 
     override fun getPresentation(): ItemPresentation {
         return object : ItemPresentation {
-            override fun getPresentableText() = astNode.javaClass.simpleName
+            override fun getPresentableText(): String {
+                // TODO: Ideally we give known node types their own implementation of UiAstPsiElement to avoid these switch statements
+                return when (astNode) {
+                    is NodeAssignVariable -> "Assign ${astNode.variable.identifier}"
+
+                    else -> astNode.javaClass.simpleName
+                } + " [${file.name}]"
+            }
+
             override fun getLocationString() = file.name
             override fun getIcon(unused: Boolean): Icon? = null
         }
