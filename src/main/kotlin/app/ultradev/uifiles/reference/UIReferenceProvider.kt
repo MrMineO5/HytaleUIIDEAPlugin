@@ -29,8 +29,8 @@ class ReferenceCollector : AstVisitor {
     override fun visit(node: AstNode) {
         if (node is NodeVariable && node.parent !is NodeAssignVariable) variableRefs += node
         if (node is NodeReference && node.parent !is NodeAssignReference) importRefs += node
-        if (node is NodeAssignReference) importPaths += node.filePath
-        if (node is NodeMemberField) referenceMembers += node.member
+        if (node is NodeAssignReference) importPaths += node.filePath!!
+        if (node is NodeMemberField && node.valid) referenceMembers += node.member!!
     }
 }
 
@@ -39,9 +39,10 @@ class UIFileReferenceProvider : PsiReferenceProvider() {
         element: PsiElement, context: ProcessingContext
     ): Array<PsiReference> {
         val file = element as? UIFile ?: return PsiReference.EMPTY_ARRAY
-        thisLogger().warn("Getting references for ${file.name}")
+        thisLogger().debug("Getting references for ${file.name}")
         val root = file.getRootNode() ?: return PsiReference.EMPTY_ARRAY
-        thisLogger().warn("Root node: $root")
+        thisLogger().debug("Found root node")
+        thisLogger().trace("Root node: $root")
 
         val refs = mutableListOf<PsiReference>()
 

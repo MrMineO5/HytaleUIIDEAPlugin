@@ -14,8 +14,8 @@ class UiAstNamedPsiElement(
 ) : UiAstPsiElement(file, astNode), PsiNamedElement {
     override fun getName(): String {
         return when (astNode) {
-            is NodeAssignVariable -> astNode.variable.identifier
-            is NodeAssignReference -> astNode.variable.identifier
+            is NodeAssignVariable -> astNode.variable!!.identifier
+            is NodeAssignReference -> astNode.variable!!.identifier
             else -> "Unknown node: ${astNode.javaClass.simpleName}"
         }
     }

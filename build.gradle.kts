@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "app.ultradev"
-version = "1.0.1"
+version = "1.1.0"
 
 repositories {
     mavenCentral()
@@ -19,10 +19,10 @@ repositories {
 // Configure IntelliJ Platform Gradle Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
-    api("app.ultradev:HytaleUIParser:1.0.4")
+    api("app.ultradev:HytaleUIParser:2.0.0")
     
     intellijPlatform {
-        intellijIdea("2025.3.2")
+        intellijIdea("2024.3.2")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
         // Add necessary plugin dependencies for compilation here, example:
@@ -33,12 +33,14 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "253"
+            sinceBuild = "243"
         }
+    }
 
-        changeNotes = """
-            Initial version
-        """.trimIndent()
+    pluginVerification {
+        ides {
+            recommended()
+        }
     }
 }
 

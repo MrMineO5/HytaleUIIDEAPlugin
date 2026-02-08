@@ -1,1 +1,1 @@
-rootProject.name = "ui-files"
+rootProject.name = "HyUIPlugin"

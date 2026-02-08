@@ -34,7 +34,7 @@ open class UiAstPsiElement(
             override fun getPresentableText(): String {
                 // TODO: Ideally we give known node types their own implementation of UiAstPsiElement to avoid these switch statements
                 return when (astNode) {
-                    is NodeAssignVariable -> "Assign ${astNode.variable.identifier}"
+                    is NodeAssignVariable -> "Assign ${astNode.variable!!.identifier}"
 
                     else -> astNode.javaClass.simpleName
                 } + " [${file.name}]"

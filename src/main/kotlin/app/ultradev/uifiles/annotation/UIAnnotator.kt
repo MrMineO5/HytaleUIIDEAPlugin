@@ -52,6 +52,17 @@ class UIAnnotator : Annotator {
 
                     annotation.create()
                 }
+
+
+                is UIAnalysisService.UIErrorParseRecoverable -> {
+                    val annotation = holder.newAnnotation(
+                        HighlightSeverity.ERROR,
+                        diag.error.message
+                    )
+                        .range(diag.range)
+
+                    annotation.create()
+                }
             }
         }
     }

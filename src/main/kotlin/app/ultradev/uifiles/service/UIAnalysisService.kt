@@ -3,6 +3,7 @@ package app.ultradev.uifiles.service
 import app.ultradev.hytaleuiparser.*
 import app.ultradev.hytaleuiparser.ast.RootNode
 import app.ultradev.uifiles.ideaTextRange
+import app.ultradev.uifiles.service.UIAnalysisService.UIErrorParseRecoverable
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -42,6 +43,10 @@ class UIAnalysisService(private val project: Project) {
 
     sealed interface UIError {
         val range: TextRange
+    }
+
+    data class UIErrorParseRecoverable(val error: ParserError) : UIError {
+        override val range: TextRange get() = error.token.ideaTextRange
     }
 
     data class UIErrorParse(val error: ParserException) : UIError {
@@ -130,7 +135,7 @@ class UIAnalysisService(private val project: Project) {
             val tokenizer = Tokenizer(StringReader(text))
             val parser = Parser(tokenizer)
             internalAsts[file] = parser.finish()
-            diagnostics.remove(file)
+            diagnostics[file] = parser.parserErrors.map(::UIErrorParseRecoverable)
         } catch (e: ParserException) {
             internalAsts.remove(file)
             diagnostics[file] = listOf(
@@ -180,13 +185,16 @@ class UIAnalysisService(private val project: Project) {
             val relativePath = getRelativePath(file)
             try {
                 validator.validateRoot(relativePath)
-                diagnostics.putIfAbsent(
-                    file, validator.validationErrors
+                diagnostics.compute(
+                    file
+                ) { _, errors ->
+                    val newErrors = validator.validationErrors
                         .filter { it.node.file == ast }
                         .map {
                             UIErrorValidate(it)
                         }
-                )
+                    errors?.plus(newErrors) ?: newErrors
+                }
                 validatedAsts[file] = ast
             } catch (e: NullPointerException) {
                 val hey = "test";
@@ -204,7 +212,7 @@ class UIAnalysisService(private val project: Project) {
                 it.dropPsiCaches()
             }
         }
-        DaemonCodeAnalyzer.getInstance(project).restart("UI AST updated")
+        DaemonCodeAnalyzer.getInstance(project).restart()
     }
 
     private fun isUiFile(file: VirtualFile): Boolean =

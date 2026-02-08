@@ -58,6 +58,14 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
                 completeElementTypes(result)
             }
 
+            nodeAtCursor is NodeRefMember -> {
+                val desiredType = determineDesiredType(nodeAtCursor)
+                thisLogger().debug("Desired type: $desiredType")
+                // Since we're completing at the "." we may not have a variable to get the scope
+                val scope = nodeAtCursor.reference?.resolvedAssignment?.resolvedFileRoot?.resolvedScope ?: return
+                // No @ symbol present yet, need to insert it
+                completeVariables(scope, result, desiredType, removeAt = false)
+            }
             nodeAtCursor is NodeVariable -> {
                 if (isElementExpected(nodeAtCursor)) {
                     completeElements(nodeAtCursor.resolvedScope!!, result)
@@ -73,7 +81,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
             }
 
             nodeAtCursor is NodeBody -> {
-                if (offset - 1 == nodeAtCursor.endToken.token.startOffset) return
+                if (offset - 1 == nodeAtCursor.endToken!!.token.startOffset) return
 
                 val parent = nodeAtCursor.parent
                 if (parent is NodeElement) {
@@ -90,7 +98,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
                     val parentParent = parent.parent.parent
                     if (parentParent is NodeType) {
                         val allowedFields = parentParent.resolvedTypes.unifyStructOrNull() ?: return
-                        val fieldType = allowedFields[parent.identifier.identifier]
+                        val fieldType = allowedFields[parent.identifier!!.identifier]
                         if (fieldType != null) {
                             completeTypeProperties(setOf(fieldType), result)
                         }
@@ -102,7 +110,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
                 val parentParent = nodeAtCursor.parent.parent
                 if (parentParent is NodeType) {
                     val allowedFields = parentParent.resolvedTypes.unifyStructOrNull() ?: return
-                    val fieldType = allowedFields[nodeAtCursor.identifier.identifier]
+                    val fieldType = allowedFields[nodeAtCursor.identifier!!.identifier]
                     if (fieldType != null) {
                         completeTypeProperties(setOf(fieldType), result)
                     }
@@ -123,7 +131,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
     }
 
     private fun completeMemberField(node: NodeMemberField, result: CompletionResultSet) {
-        val type = node.ownerAsVariableReference.deepResolve() as? NodeType ?: return
+        val type = node.ownerAsVariableReference!!.deepResolve() as? NodeType ?: return
         type.resolveFields().forEach { (fieldName, field) ->
             result.addElement(
                 LookupElementBuilder
@@ -146,7 +154,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
     }
 
     private fun completeVariables(
-        scope: Scope, result: CompletionResultSet, desiredType: TypeType?
+        scope: Scope, result: CompletionResultSet, desiredType: TypeType?, removeAt: Boolean = true
     ) {
         val variables = scope.variableKeys()
             .filter {
@@ -158,7 +166,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
             val resT = variable.resolvedTypes
             result.addElement(
                 LookupElementBuilder
-                    .create(varName.removePrefix("@"))
+                    .create(varName.let { if (removeAt) it.removePrefix("@") else it })
                     .withPresentableText(varName)
                     .let {
                         if (resT != null) {

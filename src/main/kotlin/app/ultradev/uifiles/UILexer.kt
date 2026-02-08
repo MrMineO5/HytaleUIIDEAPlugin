@@ -51,7 +51,14 @@ class UILexer : LexerBase() {
 
     override fun advance() {
         currentToken =
-            if (tokenizer?.hasNext() == true) tokenizer?.next()
+            if (tokenizer?.hasNext() == true) {
+                val token = tokenizer?.next()
+                if (token == null || token.type == Token.Type.EOF) {
+                    null
+                } else {
+                    token
+                }
+            }
             else null
     }
 

@@ -33,6 +33,7 @@ object UITokenTypes {
     val TRANSLATION_MARKER = IElementType("TRANSLATION_MARKER", UILanguage.INSTANCE)
     val ERROR = IElementType("ERROR", UILanguage.INSTANCE)
     val WHITESPACE = IElementType("WHITESPACE", UILanguage.INSTANCE)
+    val EOF = IElementType("EOF", UILanguage.INSTANCE)
 
     fun fromTokenType(type: Token.Type): IElementType {
         return when (type) {
@@ -62,6 +63,7 @@ object UITokenTypes {
             Token.Type.TRANSLATION_MARKER -> TRANSLATION_MARKER
             Token.Type.WHITESPACE -> WHITESPACE
             Token.Type.UNKNOWN -> ERROR
+            Token.Type.EOF -> EOF
         }
     }
 }

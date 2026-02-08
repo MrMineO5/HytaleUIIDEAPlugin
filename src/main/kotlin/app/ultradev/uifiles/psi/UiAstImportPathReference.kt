@@ -12,6 +12,6 @@ class UiAstImportPathReference(
 ) : PsiReferenceBase<UIFile>(file, astRef.ideaTextRange, false) {
     override fun resolve(): PsiElement? {
         val parent = astRef.parent as? NodeAssignReference ?: return null
-        return UiPsiWrapperFactory.getFile(element.project, parent.resolvedFilePath)
+        return UiPsiWrapperFactory.getFile(element.project, parent.resolvedFilePath!!)
     }
 }

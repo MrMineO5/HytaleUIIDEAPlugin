@@ -37,7 +37,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                     is NodeField -> {
                         val type = parent.resolvedType
                         htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
-                            .append(getFormattedSpan(node.identifier, DefaultLanguageHighlighterColors.IDENTIFIER))
+                            .append(getFormattedSpan(node.identifier!!, DefaultLanguageHighlighterColors.IDENTIFIER))
                             .append(HtmlChunk.text(": "))
                             // Idk, CLASS_NAME is better than something else
                             .append(getFormattedSpan(type.name, DefaultLanguageHighlighterColors.CLASS_NAME))
@@ -51,12 +51,12 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                     }
 
                     is NodeElement -> {
-                        htmlBuilder.append(HtmlChunk.tag("b").addText(node.identifier))
+                        htmlBuilder.append(HtmlChunk.tag("b").addText(node.identifier!!))
                         htmlBuilder.append(formatCode(parent.resolvedType.displayFullStructure()))
                     }
 
                     is NodeType -> {
-                        htmlBuilder.append(HtmlChunk.tag("b").addText(node.identifier))
+                        htmlBuilder.append(HtmlChunk.tag("b").addText(node.identifier!!))
                         htmlBuilder.append(formatCode(parent.resolvedTypes.displayFullStructure()))
                     }
 
@@ -91,7 +91,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                 if (value is NodeElement) {
                     val elementType = value.resolvedType
                     htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
-                        .append(getFormattedSpan(node.identifier, DefaultLanguageHighlighterColors.IDENTIFIER))
+                        .append(getFormattedSpan(node.identifier!!, DefaultLanguageHighlighterColors.IDENTIFIER))
                         .append(HtmlChunk.text(": "))
                         .append(getFormattedSpan(elementType.name, DefaultLanguageHighlighterColors.CLASS_NAME))
                         .append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_END))
@@ -99,7 +99,7 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                     val types = value.resolvedTypes
 
                     htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
-                        .append(getFormattedSpan(node.identifier, DefaultLanguageHighlighterColors.KEYWORD))
+                        .append(getFormattedSpan(node.identifier!!, DefaultLanguageHighlighterColors.KEYWORD))
                         .append(HtmlChunk.text(": "))
                         .append(
                             getFormattedSpan(
