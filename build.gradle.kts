@@ -19,7 +19,7 @@ repositories {
 // Configure IntelliJ Platform Gradle Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
-    api("app.ultradev:HytaleUIParser:2.0.0")
+    api("app.ultradev:HytaleUIParser:2.0.1")
     
     intellijPlatform {
         intellijIdea("2024.3.2")
