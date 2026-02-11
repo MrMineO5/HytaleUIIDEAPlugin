@@ -27,7 +27,7 @@ object UiPsiWrapperFactory {
 
         val psiFile = virtualFile.findPsiFile(project) as? UIFile ?: return null
 
-        val psi = UiAstPsiElement(psiFile, node)
+        val psi = UiAstNamedPsiElement(psiFile, node)
         cache[node] = WeakReference(psi)
         return psi
     }

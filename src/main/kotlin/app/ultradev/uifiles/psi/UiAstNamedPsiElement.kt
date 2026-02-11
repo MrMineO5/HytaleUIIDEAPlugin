@@ -23,14 +23,4 @@ class UiAstNamedPsiElement(
     override fun setName(name: String): PsiElement {
         TODO()
     }
-
-    override fun getPresentableText(): String = "$name [${file.name}]"
-
-    override fun getPresentation(): ItemPresentation {
-        return object : ItemPresentation {
-            override fun getPresentableText() = name
-            override fun getLocationString() = file.name
-            override fun getIcon(unused: Boolean): Icon? = null
-        }
-    }
 }

@@ -4,12 +4,15 @@ import app.ultradev.hytaleuiparser.ast.AstNode
 import app.ultradev.hytaleuiparser.ast.NodeAssignVariable
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.ideaTextRange
+import app.ultradev.uifiles.truncate
+import com.intellij.icons.AllIcons
 import com.intellij.navigation.ItemPresentation
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.FakePsiElement
+import com.intellij.ui.PlatformIcons
 import javax.swing.Icon
 
 open class UiAstPsiElement(
@@ -34,14 +37,14 @@ open class UiAstPsiElement(
             override fun getPresentableText(): String {
                 // TODO: Ideally we give known node types their own implementation of UiAstPsiElement to avoid these switch statements
                 return when (astNode) {
-                    is NodeAssignVariable -> "Assign ${astNode.variable!!.identifier}"
+                    is NodeAssignVariable -> "${astNode.variable!!.identifier} = ${astNode.value!!.text.replace("\n", "").truncate(15)}"
 
                     else -> astNode.javaClass.simpleName
-                } + " [${file.name}]"
+                }
             }
 
-            override fun getLocationString() = file.name
-            override fun getIcon(unused: Boolean): Icon? = null
+            override fun getLocationString() = "${file.name}:${astNode.tokens.first().startLine + 1}"
+            override fun getIcon(unused: Boolean): Icon = AllIcons.Nodes.Variable
         }
     }
 }

@@ -87,6 +87,8 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
             }
 
             is NodeVariable -> {
+                thisLogger().warn("Scopes: ${node.scopes.keys.joinToString(", ")}")
+
                 val value = node.deepResolve() ?: return null
                 if (value is NodeElement) {
                     val elementType = value.resolvedType

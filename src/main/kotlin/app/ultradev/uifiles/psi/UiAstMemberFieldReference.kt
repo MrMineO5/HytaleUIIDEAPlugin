@@ -15,7 +15,7 @@ class UiAstMemberFieldReference(
 ) : PsiReferenceBase<UIFile>(file, astRef.ideaTextRange, false) {
     override fun resolve(): PsiElement? {
         val parent = astRef.parent as? NodeMemberField ?: return null
-        val ownerType = parent.ownerAsVariableReference!!.deepResolve() as? NodeType ?: return null
+        val ownerType = parent.ownerAsVariableValue.deepResolve() as? NodeType ?: return null
         val resFields = ownerType.resolveFields()
         val declaration = resFields[astRef.identifier] ?: return null
         return UiPsiWrapperFactory.getOrCreate(element.project, declaration)

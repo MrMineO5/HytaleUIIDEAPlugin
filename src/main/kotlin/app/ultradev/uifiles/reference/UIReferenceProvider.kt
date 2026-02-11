@@ -27,7 +27,11 @@ class ReferenceCollector : AstVisitor {
     val referenceMembers = mutableListOf<NodeIdentifier>()
 
     override fun visit(node: AstNode) {
-        if (node is NodeVariable && node.parent !is NodeAssignVariable) variableRefs += node
+        if (node is NodeVariable) {
+            val parent = node.parent
+            if (parent is NodeAssignVariable && parent.variable == node) return
+            variableRefs += node
+        }
         if (node is NodeReference && node.parent !is NodeAssignReference) importRefs += node
         if (node is NodeAssignReference) importPaths += node.filePath!!
         if (node is NodeMemberField && node.valid) referenceMembers += node.member!!

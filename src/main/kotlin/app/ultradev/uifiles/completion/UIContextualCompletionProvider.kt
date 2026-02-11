@@ -81,7 +81,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
             }
 
             nodeAtCursor is NodeBody -> {
-                if (offset - 1 == nodeAtCursor.endToken!!.token.startOffset) return
+                if (offset - 1 == nodeAtCursor.endToken?.token?.startOffset) return
 
                 val parent = nodeAtCursor.parent
                 if (parent is NodeElement) {
@@ -131,7 +131,7 @@ class UIContextualCompletionProvider : CompletionProvider<CompletionParameters>(
     }
 
     private fun completeMemberField(node: NodeMemberField, result: CompletionResultSet) {
-        val type = node.ownerAsVariableReference!!.deepResolve() as? NodeType ?: return
+        val type = node.ownerAsVariableValue.deepResolve() as? NodeType ?: return
         type.resolveFields().forEach { (fieldName, field) ->
             result.addElement(
                 LookupElementBuilder
