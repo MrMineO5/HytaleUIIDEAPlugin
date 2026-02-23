@@ -1,7 +1,9 @@
 package app.ultradev.uifiles.documentation
 
+import app.ultradev.hytaleuiparser.ast.NodeConstant
 import app.ultradev.hytaleuiparser.ast.NodeIdentifier
 import app.ultradev.hytaleuiparser.ast.NodeToken
+import app.ultradev.hytaleuiparser.ast.NodeTranslation
 import app.ultradev.hytaleuiparser.ast.NodeVariable
 import app.ultradev.hytaleuiparser.ast.visitor.findNodeAtOffset
 import app.ultradev.uifiles.UIFile
@@ -24,6 +26,10 @@ class UIDocumentationProvider : DocumentationTargetProvider {
         thisLogger().warn("Cursor ${offset}, best match: $finalNode")
 
         if (finalNode is NodeIdentifier || finalNode is NodeVariable) return listOf(UIDocumentationTarget(finalNode))
+        if (finalNode is NodeConstant) {
+            val parent = finalNode.parent
+            if (parent is NodeTranslation) return listOf(UIDocumentationTarget(parent))
+        }
 
         return emptyList()
     }

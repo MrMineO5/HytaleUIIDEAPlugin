@@ -5,6 +5,8 @@
     <description>A plugin to provide editor features for Hytale UI files</description>
     <depends>com.intellij.modules.platform</depends>
 
+    <depends optional="true" config-file="app.ultradev.hytaleui-java.xml">com.intellij.modules.java-capable</depends>
+
     <extensions defaultExtensionNs="com.intellij">
         <!-- File Type -->
         <fileType name="UI File" implementationClass="app.ultradev.uifiles.UIFileType" fieldName="INSTANCE"
@@ -44,6 +46,11 @@
 
         <!-- Startup Activity - parse all files on project open -->
         <postStartupActivity implementation="app.ultradev.uifiles.startup.UIStartupActivity"/>
+
+        <toolWindow id="UI Preview"
+                    anchor="right"
+                    factoryClass="app.ultradev.uifiles.preview.UIPreviewToolWindowFactory"
+                    icon="/META-INF/uifile.svg"/>
 
         <applicationService
                 serviceImplementation="app.ultradev.uifiles.settings.UIAppSettings"/>

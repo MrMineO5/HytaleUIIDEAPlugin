@@ -2,13 +2,18 @@ package app.ultradev.uifiles.service
 
 import app.ultradev.hytaleuiparser.*
 import app.ultradev.hytaleuiparser.ast.RootNode
+import app.ultradev.hytaleuiparser.source.ArchiveAssetSource
+import app.ultradev.hytaleuiparser.source.AssetSource
+import app.ultradev.hytaleuiparser.source.CombinedAssetSource
 import app.ultradev.uifiles.ideaTextRange
-import app.ultradev.uifiles.service.UIAnalysisService.UIErrorParseRecoverable
+import app.ultradev.uifiles.parser.VirtualFileAssetSource
+import app.ultradev.uifiles.preview.UIPreviewToolWindowService
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.serviceIfCreated
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
@@ -33,6 +38,9 @@ import java.nio.file.Paths
 import java.io.StringReader
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+import kotlin.io.path.Path
 
 @Service(Service.Level.PROJECT)
 class UIAnalysisService(private val project: Project) {
@@ -40,6 +48,8 @@ class UIAnalysisService(private val project: Project) {
     private val zipAsts = ConcurrentHashMap<VirtualFile, RootNode>()
     private val asts = ConcurrentHashMap<VirtualFile, RootNode>()
     private val diagnostics = ConcurrentHashMap<VirtualFile, List<UIError>>()
+
+    private val validationLock = ReentrantLock()
 
     sealed interface UIError {
         val range: TextRange
@@ -90,10 +100,11 @@ class UIAnalysisService(private val project: Project) {
 
                     ReadAction.nonBlocking(Callable<Unit> {
                         files.forEach { parseFromDisk(it) }
-                        validateAllInternal()
+                        validateAll()
                     })
                         .finishOnUiThread(ModalityState.any()) {
                             dropCachesAndRestartDaemon()
+                            refreshPreviewIfOpen()
                         }
                         .submit(AppExecutorUtil.getAppExecutorService())
                 }
@@ -109,7 +120,7 @@ class UIAnalysisService(private val project: Project) {
 
             ReadAction.nonBlocking {
                 parseFromDocument(file, document)
-                validateAllInternal()
+                validateAll()
             }
                 .finishOnUiThread(ModalityState.any()) {
                     if (modificationStamps[file] != stamp) {
@@ -117,6 +128,7 @@ class UIAnalysisService(private val project: Project) {
                         return@finishOnUiThread
                     }
                     dropCachesAndRestartDaemon()
+                    refreshPreviewIfOpen()
                 }
                 .submit(AppExecutorUtil.getAppExecutorService())
         }, 250)
@@ -170,15 +182,16 @@ class UIAnalysisService(private val project: Project) {
         }
     }
 
-    private fun validateAllInternal() {
+    private fun validateAll() = validationLock.withLock {
         val internalSnapshot = internalAsts.toMap()
         val zipSnapshot = zipAsts.toMap()
         val allAstSnapshot = zipSnapshot + internalSnapshot
-        if (allAstSnapshot.isEmpty()) return
+        if (allAstSnapshot.isEmpty()) return@withLock
 
         val pathMap = allAstSnapshot.mapKeys { getRelativePath(it.key) }
 
-        val validator = Validator(pathMap, validateUnusedVariables = true)
+        val assetSource = getProjectAssetSource()
+        val validator = Validator(pathMap, validateUnusedVariables = true, assetSource = assetSource)
 
         val validatedAsts = mutableMapOf<VirtualFile, RootNode>()
         allAstSnapshot.forEach { (file, ast) ->
@@ -196,8 +209,8 @@ class UIAnalysisService(private val project: Project) {
                     errors?.plus(newErrors) ?: newErrors
                 }
                 validatedAsts[file] = ast
-            } catch (e: NullPointerException) {
-                val hey = "test";
+            } catch (e: Exception) {
+                thisLogger().error("Could not validate $relativePath:", e)
             }
         }
         
@@ -215,19 +228,23 @@ class UIAnalysisService(private val project: Project) {
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
 
+    private fun refreshPreviewIfOpen() {
+        project.serviceIfCreated<UIPreviewToolWindowService>()?.refreshCurrentFilePreview()
+    }
+
     private fun isUiFile(file: VirtualFile): Boolean =
         file.extension == "ui" &&
                 file.isInLocalFileSystem &&
                 ProjectRootManager.getInstance(project).fileIndex.isInSourceContent(file)
 
-    private fun getRelativePath(file: VirtualFile): String {
+    fun getRelativePath(file: VirtualFile): String {
         ProjectRootManager.getInstance(project)
             .fileIndex
             .getSourceRootForFile(file)
             ?.let { root ->
-                return VfsUtilCore.getRelativePath(file, root, '/').toString()
+                val rel = VfsUtilCore.getRelativePath(file, root, '/')
+                if (rel != null) return rel
             }
-            ?: file.path
 
         if (file.fileSystem is JarFileSystem) {
             var jarRoot = file
@@ -236,6 +253,8 @@ class UIAnalysisService(private val project: Project) {
             }
             return VfsUtilCore.getRelativePath(file, jarRoot, '/') ?: file.path
         }
+
+        thisLogger().warn("Failed to relativize $file, returning full path")
 
         return file.path
     }
@@ -250,6 +269,14 @@ class UIAnalysisService(private val project: Project) {
 
     fun findVirtualFileByRelativePath(relativePath: String): VirtualFile? {
         return asts.keys.find { getRelativePath(it) == relativePath }
+    }
+
+    fun getProjectAssetSource(): AssetSource {
+        val rootManager = ProjectRootManager.getInstance(project)
+        return CombinedAssetSource(
+            rootManager.contentSourceRoots.map { VirtualFileAssetSource(it) } +
+                    ArchiveAssetSource(Path(UIAppSettings.instance.state.effectiveAssetZipPath()))
+        )
     }
 
     fun scheduleInitialScan() {
@@ -276,10 +303,11 @@ class UIAnalysisService(private val project: Project) {
             if (files.isEmpty() && zipAsts.isEmpty()) return@nonBlocking
 
             files.forEach { parseFromDisk(it) }
-            validateAllInternal()
+            validateAll()
         }
             .finishOnUiThread(ModalityState.any()) {
                 dropCachesAndRestartDaemon()
+                refreshPreviewIfOpen()
             }
             .submit(AppExecutorUtil.getAppExecutorService())
     }

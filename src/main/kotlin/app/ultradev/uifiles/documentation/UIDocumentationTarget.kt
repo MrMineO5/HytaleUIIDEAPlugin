@@ -121,6 +121,22 @@ class UIDocumentationTarget(val node: AstNode) : DocumentationTarget {
                 }
             }
 
+            is NodeTranslation -> {
+                val translationKey = node.value?.text ?: return null
+                htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_START))
+                    .append(getFormattedSpan(translationKey.substringBefore(".") + ".lang", DefaultLanguageHighlighterColors.CLASS_NAME))
+                    .append(HtmlChunk.text(" -> "))
+                    .append(getFormattedSpan(translationKey.substringAfter("."), DefaultLanguageHighlighterColors.INSTANCE_FIELD))
+                    .append(HtmlChunk.raw(DocumentationMarkup.DEFINITION_END))
+
+                val resolved = node.resolvedTranslation
+                if (resolved != null) {
+                    htmlBuilder.append(HtmlChunk.raw(DocumentationMarkup.CONTENT_START))
+                        .append(formatCode(resolved))
+                        .append(HtmlChunk.raw(DocumentationMarkup.CONTENT_END))
+                }
+            }
+
             else -> thisLogger().warn("Unknown node: ${node.javaClass.simpleName}")
         }
 
