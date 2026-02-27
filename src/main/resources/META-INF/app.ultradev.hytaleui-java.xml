@@ -1,5 +1,5 @@
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
-
+        <applicationService serviceImplementation="app.ultradev.uifiles.preview.UIPreviewJavaSupportService" />
     </extensions>
 </idea-plugin>

@@ -8,12 +8,8 @@ import com.intellij.ui.content.ContentFactory
 
 class UIPreviewToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val panel = UIPreviewToolWindowPanel(project, toolWindow)
-        val content = ContentFactory.getInstance().createContent(panel, "", false)
-        content.setDisposer {
-            panel.onContentDisposed()
-        }
-        toolWindow.contentManager.addContent(content)
+        val service = project.getService(UIPreviewToolWindowService::class.java)
+        service.provideContent(toolWindow)
     }
 
     override fun shouldBeAvailable(project: Project): Boolean = true

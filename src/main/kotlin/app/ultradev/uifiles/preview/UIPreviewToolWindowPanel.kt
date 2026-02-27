@@ -1,13 +1,17 @@
 package app.ultradev.uifiles.preview
 
+import app.ultradev.hytaleuiparser.ast.FakeAstNode
+import app.ultradev.hytaleuiparser.generated.elements.GroupProperties
 import app.ultradev.hytaleuiparser.renderer.HytaleUIPanel
-import app.ultradev.hytaleuiparser.renderer.UITransformer
+import app.ultradev.hytaleuiparser.renderer.element.AbstractUIElement
+import app.ultradev.hytaleuiparser.renderer.element.impl.UIGroupElement
+import app.ultradev.hytaleuiparser.source.AssetSource
+import app.ultradev.hytaleuiparser.source.EmptyAssetSource
+import app.ultradev.uifiles.preview.action.PinCurrentUIAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindow
 import java.awt.BorderLayout
 import java.awt.image.BufferedImage
-import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -17,104 +21,61 @@ class UIPreviewToolWindowPanel(
     project: Project,
     private val toolWindow: ToolWindow
 ) : JPanel(BorderLayout()) {
-
-    private val previewService = project.getService(UIPreviewToolWindowService::class.java)
+    private val topPane = JPanel(BorderLayout())
+    private val headerControls = JPanel(BorderLayout())
+    private val debugControls = UIDebugControlPane(project)
+    private val messagePane = JPanel(BorderLayout())
 
     private val previewHost = JPanel(BorderLayout())
+    private val previewComponent = HytaleUIPanel(
+        UIGroupElement(FakeAstNode, listOf(), GroupProperties()),
+        backgroundImage,
+        EmptyAssetSource
+    )
+
     private val emptyLabel = JLabel("Select a .ui file to preview")
 
-    private val cachedPreviewByPath = ConcurrentHashMap<String, JComponent>()
     private var currentPreviewComponent: JComponent? = null
 
-    private val fileListener = object : UIPreviewToolWindowService.Listener {
-        override fun currentFileChanged(file: VirtualFile?) {
-            renderSelectedFile(file)
-        }
-    }
-
     init {
-        add(previewHost, BorderLayout.CENTER)
-        setPreviewComponent(emptyLabel)
-        updateToolWindowTitle(previewService.getCurrentFile(), pending = false)
+        headerControls.add(debugControls, BorderLayout.WEST)
+        topPane.add(headerControls, BorderLayout.NORTH)
+        topPane.add(messagePane, BorderLayout.CENTER)
 
-        val selectedFile = previewService.getCurrentFile()
-        renderSelectedFile(selectedFile)
-        previewService.addCurrentFileListener(fileListener)
-        previewService.registerPanel(this)
+        toolWindow.setTitleActions(listOf(PinCurrentUIAction(project)))
+
+
+        add(topPane, BorderLayout.NORTH)
+
+        add(previewHost, BorderLayout.CENTER)
+        previewHost.add(previewComponent, BorderLayout.CENTER)
+
+        setPreviewMessage(emptyLabel)
     }
 
-    fun setPreviewComponent(component: JComponent?) {
+    fun setPreviewComponent(root: AbstractUIElement?) {
+        previewComponent.replaceElement(root ?: UIGroupElement(FakeAstNode, listOf(), GroupProperties()))
+    }
+
+    fun setPreviewMessage(component: JComponent?) {
         if (currentPreviewComponent === component) return
-        previewHost.removeAll()
+        messagePane.removeAll()
         if (component != null) {
-            previewHost.add(component, BorderLayout.CENTER)
+            messagePane.add(component, BorderLayout.CENTER)
         }
         currentPreviewComponent = component
-        previewHost.revalidate()
-        previewHost.repaint()
+        messagePane.revalidate()
+        messagePane.repaint()
     }
 
     fun onContentDisposed() {
-        previewService.unregisterPanel(this)
-        previewService.removeCurrentFileListener(fileListener)
+        toolWindow.setTitleActions(emptyList())
+        debugControls.onContentDisposed()
     }
 
-    fun refreshCurrentFilePreview() {
-        val selectedFile = previewService.getCurrentFile()
-        renderSelectedFile(selectedFile)
-    }
-
-    private fun renderSelectedFile(file: VirtualFile?) {
-        if (file == null) {
-            setPreviewComponent(emptyLabel)
-            updateToolWindowTitle(null, pending = false)
-            return
-        }
-
-        if (!file.extension.equals("ui", ignoreCase = true)) {
-            emptyLabel.text = "Preview currently supports only .ui files"
-            setPreviewComponent(emptyLabel)
-            updateToolWindowTitle(file, pending = false)
-            return
-        }
-
-        val rootNode = previewService.getRootNode(file)
-        if (rootNode == null) {
-            val cached = cachedPreviewByPath[file.path]
-            if (cached != null) {
-                setPreviewComponent(cached)
-                updateToolWindowTitle(file, pending = true)
-            } else {
-                emptyLabel.text = "No parsed RootNode yet for ${file.name}"
-                setPreviewComponent(emptyLabel)
-                updateToolWindowTitle(file, pending = true)
-            }
-            return
-        }
-
-        try {
-            val rootUIElement = UITransformer.transform(rootNode)
-            val panel = HytaleUIPanel(rootUIElement, backgroundImage, previewService.getAssetSource())
-            cachedPreviewByPath[file.path] = panel
-            setPreviewComponent(panel)
-            updateToolWindowTitle(file, pending = false)
-        } catch (t: Throwable) {
-            val cached = cachedPreviewByPath[file.path]
-            if (cached != null) {
-                setPreviewComponent(cached)
-                updateToolWindowTitle(file, pending = true)
-            } else {
-                emptyLabel.text = "Failed to render: ${t.message ?: t::class.java.simpleName}"
-                setPreviewComponent(emptyLabel)
-                updateToolWindowTitle(file, pending = true)
-            }
-        }
-    }
-
-    private fun updateToolWindowTitle(file: VirtualFile?, pending: Boolean) {
-        val base = "UI Preview"
-        val withFile = if (file == null) base else "$base [${file.name}]"
-        toolWindow.setTitle(if (pending) "$withFile Pending..." else withFile)
+    fun updateAssetSource(source: AssetSource) {
+        previewComponent.assetSource = source
+        previewComponent.context.invalidateCache()
     }
 
     companion object {

@@ -27,6 +27,8 @@ class ReferenceCollector : AstVisitor {
     val referenceMembers = mutableListOf<NodeIdentifier>()
 
     override fun visit(node: AstNode) {
+        if (!node.valid) return // TODO: Ignoring invalid for now, should we try harder?
+
         if (node is NodeVariable) {
             val parent = node.parent
             if (parent is NodeAssignVariable && parent.variable == node) return
