@@ -2,7 +2,6 @@ package app.ultradev.uifiles.annotation
 
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.service.UIAnalysisService
-import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator

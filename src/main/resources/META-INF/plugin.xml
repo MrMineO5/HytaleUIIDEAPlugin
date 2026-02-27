@@ -43,6 +43,10 @@
 
         <!-- Commenting -->
         <lang.commenter language="UI" implementationClass="app.ultradev.uifiles.commenter.UICommenter"/>
+        <!-- Brace pairing -->
+        <lang.braceMatcher language="UI" implementationClass="app.ultradev.uifiles.typing.UIPairedBraceMatcher"/>
+        <!-- Quote pairing -->
+        <lang.quoteHandler language="UI" implementationClass="app.ultradev.uifiles.typing.UIQuoteHandler"/>
 
         <!-- Startup Activity - parse all files on project open -->
         <postStartupActivity implementation="app.ultradev.uifiles.startup.UIStartupActivity"/>
