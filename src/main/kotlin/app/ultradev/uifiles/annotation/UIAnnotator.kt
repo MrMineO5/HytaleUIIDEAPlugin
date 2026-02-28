@@ -2,6 +2,7 @@ package app.ultradev.uifiles.annotation
 
 import app.ultradev.uifiles.UIFile
 import app.ultradev.uifiles.service.UIAnalysisService
+import app.ultradev.uifiles.service.UIError
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
@@ -25,7 +26,7 @@ class UIAnnotator : Annotator {
             if (!diag.range.intersects(element.textRange)) continue
 
             when (diag) {
-                is UIAnalysisService.UIErrorParse -> {
+                is UIError.UIErrorParse -> {
                     holder
                         .newAnnotation(
                             HighlightSeverity.ERROR,
@@ -36,7 +37,7 @@ class UIAnnotator : Annotator {
                         .create()
                 }
 
-                is UIAnalysisService.UIErrorValidate -> {
+                is UIError.UIErrorValidate -> {
                     val annotation = holder.newAnnotation(
                         HighlightSeverity.ERROR,
                         diag.error.message
@@ -53,7 +54,7 @@ class UIAnnotator : Annotator {
                 }
 
 
-                is UIAnalysisService.UIErrorParseRecoverable -> {
+                is UIError.UIErrorParseRecoverable -> {
                     val annotation = holder.newAnnotation(
                         HighlightSeverity.ERROR,
                         diag.error.message

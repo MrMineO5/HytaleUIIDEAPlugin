@@ -20,6 +20,12 @@ class UIFile(viewProvider: FileViewProvider) : PsiFileImpl(UITokenTypes.FILE, UI
         return service?.getRootNode(file)
     }
 
+    fun getUnvalidatedRootNode(): RootNode? {
+        val file = virtualFile ?: return null
+        val service = project.getService(UIAnalysisService::class.java)
+        return service?.getUnvalidatedRootNode(file)
+    }
+
 
     override fun getFileType(): FileType = UIFileType.INSTANCE
 

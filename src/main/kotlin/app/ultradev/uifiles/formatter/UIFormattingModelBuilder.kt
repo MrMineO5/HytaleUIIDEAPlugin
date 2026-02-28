@@ -12,7 +12,7 @@ class UIFormattingModelBuilder : FormattingModelBuilder {
             context.codeStyleSettings
         )
         
-        val root = file.getRootNode() ?: return FormattingModelProvider.createFormattingModelForPsiFile(
+        val root = file.getUnvalidatedRootNode() ?: return FormattingModelProvider.createFormattingModelForPsiFile(
             file,
             UIFallbackRootBlock(context.psiElement.containingFile, context.codeStyleSettings),
             context.codeStyleSettings

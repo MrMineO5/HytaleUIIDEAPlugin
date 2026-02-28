@@ -18,7 +18,7 @@ class UIFoldingBuilder : FoldingBuilderEx() {
         quick: Boolean
     ): Array<FoldingDescriptor> {
         val file = root.containingFile as? UIFile ?: return emptyArray()
-        val rootNode = file.getRootNode() ?: return emptyArray()
+        val rootNode = file.getUnvalidatedRootNode() ?: return emptyArray()
 
         val descriptors = mutableListOf<FoldingDescriptor>()
 

@@ -8,12 +8,10 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 
 class VirtualFileAssetSource(val root: VirtualFile) : AssetSource {
-    override fun listUIFiles(): List<Path> {
+    override fun listAllFiles(): List<Path> {
         val files = mutableListOf<Path>()
         VfsUtilCore.iterateChildrenRecursively(root, null) { file ->
-            if (file.extension == "ui") {
-                files.add(Path(VfsUtilCore.getRelativePath(file, root, '/') ?: return@iterateChildrenRecursively true))
-            }
+            files.add(Path(VfsUtilCore.getRelativePath(file, root, '/') ?: return@iterateChildrenRecursively true))
             true
         }
         return files
